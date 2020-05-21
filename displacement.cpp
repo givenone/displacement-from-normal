@@ -31,7 +31,9 @@ int read_depth_map(string addr)
     if(depth_map.empty()) return -1;
 
     if(image_height != depth_map.rows || image_width != depth_map.cols) return -1;
-
+    Mat chans[3];
+    split(depth_map, chans);
+    depth_map = chans[0];
     assert(depth_map.channels() == 1);
     return 1;
 }
@@ -92,13 +94,25 @@ uniform approach
 - Target zero displacement on average
 - Offset texel by computed average
 */
-void displacement(Mat &Tx, Mat &Ty)
+void displacement(Mat &Tx, Mat &Ty, int size)
 {
   return;
 }
 
 int main(int argc, char* argv[])
 {
+  /*
+  Mat img = imread("dist0.exr", IMREAD_UNCHANGED);
+  if(img.empty()) cout << "failed" << endl;
+
+  printf("%d %d %d \n", img.rows, img.cols, img.channels());
+  Vec3f bgrPixel = img.at<Vec3f>(2000, 1000);
+  cout << bgrPixel << endl;
+
+  return 0;
+  */
+
+
   // set cx, cy, fx, fy;
   fx = 4320;
   fy = 8041.666666;
@@ -106,18 +120,30 @@ int main(int argc, char* argv[])
   cy = 1920;
 
   // load normal map and depth map.
-  if(read_normal_map("string addr") == -1) cout << "error in normal map" <<endl;
-  if(read_depth_map("string addr") == -1) cout << "error in depth map" <<endl;
+  if(read_normal_map("syn_2.tif") == -1) cout << "error in normal map" <<endl;
+  if(read_depth_map("dist0.exr") == -1) cout << "error in depth map" <<endl;
+
+  /*
+  Vec3f bgrPixel = normal_map.at<Vec3f>(2000, 1000);
+  cout << bgrPixel << endl;
+  float Pixel = depth_map.at<float>(2000, 1000);
+  cout << Pixel << endl;
+  */
+
 
   // Matrix for depth difference map.
   Mat Tx(image_height, image_width, CV_32FC1);
   Mat Ty(image_height, image_width, CV_32FC1);
   ddm(Tx, Ty);
+  float Pixelx = Tx.at<float>(2000, 1000);
+  float Pixely = Ty.at<float>(2000, 1000);
+  cout << Pixelx << endl << Pixely << endl;
 
   // Generate Displacement map.
-  displacement(Tx, Ty);
+  displacement(Tx, Ty, 3);
 
   // Save and Show image.
-
+  Tx.release();
+  Ty.release();
   return 0;
 }
