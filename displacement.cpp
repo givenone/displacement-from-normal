@@ -9,14 +9,13 @@ int image_height, image_width;
 
 Mat normal_map;
 Mat depth_map;
-Mat depth_difference_map[2];
 Mat displacement_map;
 
-uint cx, cy, fx, fy;
+float cx, cy, fx, fy;
 
-int read_map()
+int read_normal_map(string addr)
 {
-    normal_map = imread("", IMREAD_UNCHANGED);
+    normal_map = imread(addr, IMREAD_UNCHANGED);
     if(normal_map.empty()) return -1;
 
     image_height = normal_map.rows;
@@ -25,6 +24,18 @@ int read_map()
     assert(normal_map.channels() == 3);
     return 1;
 }
+
+int read_depth_map(string addr)
+{
+    depth_map = imread(addr, IMREAD_UNCHANGED);
+    if(depth_map.empty()) return -1;
+
+    if(image_height != depth_map.rows || image_width != depth_map.cols) return -1;
+
+    assert(depth_map.channels() == 1);
+    return 1;
+}
+
 /*
   arbitrary point p(x,y) = 
   (-(x-cx) * Z(x,y) / fx , 
@@ -46,30 +57,28 @@ int read_map()
 
   depth difference vector is T_x , T_y.
 */
-void ddm()
+void ddm(Mat &Tx, Mat &Ty)
 {
-    Mat Tx(image_height, image_width, CV_32FC1);
-    Mat Ty(image_height, image_width, CV_32FC1);
-
     float nx, ny, nz, z;
     for (int y = 0; y < image_height; y++)
     {
-        uchar *depth_pointer = depth_map.ptr<uchar>(y);
-        uchar *normal_pointer = normal_map.ptr<uchar>(y);
-        uchar *tx_pointer = Tx.ptr<uchar>(y);
-        uchar *ty_pointer = Ty.ptr<uchar>(y);
+        float *depth_pointer = depth_map.ptr<float>(y);
+        float *normal_pointer = normal_map.ptr<float>(y);
+        float *tx_pointer = Tx.ptr<float>(y);
+        float *ty_pointer = Ty.ptr<float>(y);
 
         for (int x = 0; x < image_width; x++)
         {
-            nx = normal_pointer[x * 4];
-            ny = normal_pointer[x * 4 + 1];
-            nz = normal_pointer[x * 4 + 2];
+            nx = normal_pointer[x * 3];
+            ny = normal_pointer[x * 3 + 1];
+            nz = normal_pointer[x * 3 + 2];
             z =  depth_pointer[x]; // not sure.
 
-            for (int l = 0; l < 3; l++)
-            {
-                
-            }
+            float lc = (-1 * nx * (x - cx) / fx) + (-1 * ny * (y- cy) / fy) + nz;
+            float rxc = nx * z / fx;
+            float ryc = ny * z / fy;
+            tx_pointer[x] = rxc / lc;
+            ty_pointer[x] = ryc / lc;
         }
     }
 
@@ -83,11 +92,32 @@ uniform approach
 - Target zero displacement on average
 - Offset texel by computed average
 */
-void dispacement()
+void dispacement(Mat &Tx, Mat &Ty)
 {
 
-    
 }
 
 int main(int argc, char* argv[])
-{}
+{
+  // set cx, cy, fx, fy;
+  fx = 4320;
+  fy = 8041.666666;
+  cx = 1080;
+  ct = 1920;
+
+  // load normal map and depth map.
+  if(read_normal_map("string addr") == -1) cout << "error in normal map" <<endl;
+  if(read_depth_map("string addr") == -1) cout << "error in depth map" <<endl;
+
+  // Matrix for depth difference map.
+  Mat Tx(image_height, image_width, CV_32FC1);
+  Mat Ty(image_height, image_width, CV_32FC1);
+  ddm(Tx, Ty);
+
+  // Generate Displacement map.
+  displacement(Tx, Ty);
+
+  // Save and Show image.
+
+  return 0;
+}
