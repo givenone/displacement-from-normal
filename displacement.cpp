@@ -92,9 +92,9 @@ uniform approach
 - Target zero displacement on average
 - Offset texel by computed average
 */
-void dispacement(Mat &Tx, Mat &Ty)
+void displacement(Mat &Tx, Mat &Ty)
 {
-
+  return;
 }
 
 int main(int argc, char* argv[])
@@ -103,7 +103,7 @@ int main(int argc, char* argv[])
   fx = 4320;
   fy = 8041.666666;
   cx = 1080;
-  ct = 1920;
+  cy = 1920;
 
   // load normal map and depth map.
   if(read_normal_map("string addr") == -1) cout << "error in normal map" <<endl;
