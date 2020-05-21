@@ -93,9 +93,64 @@ uniform approach
 - Height is reconstructed from DDM on the fly and added to integration sum
 - Target zero displacement on average
 - Offset texel by computed average
+
+dsp : displacement map matrix
+Tx : x-axis depth-difference (dz / dx)
+Ty : y-axis depth-difference (dz / dy)
+size : circle size (size for integrating adjacent pixels)
 */
-void displacement(Mat &Tx, Mat &Ty, int size)
+void displacement(Mat &dsp, Mat &Tx, Mat &Ty, int size)
 {
+  for (int y = 0; y < image_height; y++)
+  {
+      float *d_pointer = dsp.ptr<float>(y);
+
+      for (int x = 0; x < image_width; x++)
+      {
+          float depth = 0;
+          int cnt = 0;
+          // left
+          
+          if(x > 0)
+          {
+            depth += depth_map.at<float>(y, x-1) + Tx.at<float>(y, x-1);
+            cnt++;
+          }
+
+          if(x < image_width - 1)
+          {
+            depth += depth_map.at<float>(y, x+1) - Tx.at<float>(y, x +1);
+            cnt++;
+          }
+          
+          if(y > 0)
+          {
+            depth += depth_map.at<float>(y-1, x) + Ty.at<float>(y-1, x);
+            cnt++;
+          }
+
+          if(y < image_height - 1)
+          {
+            depth += depth_map.at<float>(y+1, x) - Ty.at<float>(y+1, x);
+            cnt++;
+          }
+
+          d_pointer[x] = depth / cnt;
+
+          /*
+          for(int u = -1 * size; u < size; u++)
+          {
+            for(int v = -1 * size; v <size ; v++)
+            {
+              int xx = x + u;
+              int yy = y + v;
+              if(xx < 0 || yy < 0 || xx >= image_width || yy >= image_height) continue;
+
+            }
+          }
+          */
+      }
+  }
   return;
 }
 
@@ -115,7 +170,7 @@ int main(int argc, char* argv[])
 
   // set cx, cy, fx, fy;
   fx = 4320;
-  fy = 8041.666666;
+  fy = -8041.666666;
   cx = 1080;
   cy = 1920;
 
@@ -135,13 +190,18 @@ int main(int argc, char* argv[])
   Mat Tx(image_height, image_width, CV_32FC1);
   Mat Ty(image_height, image_width, CV_32FC1);
   ddm(Tx, Ty);
+
+  /*
   float Pixelx = Tx.at<float>(2000, 1000);
   float Pixely = Ty.at<float>(2000, 1000);
-  cout << Pixelx << endl << Pixely << endl;
+  cout << Pixelx <<endl;
+  cout <<depth_map.at<float>(2000, 1001) - depth_map.at<float>(2000, 1000) <<endl;
+  */
 
   // Generate Displacement map.
-  displacement(Tx, Ty, 3);
-
+  Mat dsp(image_height, image_width, CV_32FC1);
+  displacement(dsp, Tx, Ty, 3);
+  printf("%f %f\n%f %f\n", dsp.at<float>(1950, 1000), dsp.at<float>(1950, 1001),depth_map.at<float>(1950, 1000), depth_map.at<float>(1950, 1001));
   // Save and Show image.
   Tx.release();
   Ty.release();
